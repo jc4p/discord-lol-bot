@@ -109,8 +109,8 @@ def on_member_update(before, after):
             message += "gg. {}-{}-{}, you still lose. guess you can't carry as {}".format(kills, deaths, assists, champ['name'])
         elif not did_most_damage:
             message += "Guess what? YOUR :clap: {} :clap: {} : clap {} :clap: {} :clap: DOES :clap: NO :clap: DAMAGE :clap:".format(kills, deaths, assists, champ['name'])
-       else:
-            message += "lol nice {}-{}-{} {} loss".format(kills, deathsm assists, champ['name'])
+        else:
+            message += "lol nice {}-{}-{} {} loss".format(kills, deaths, assists, champ['name'])
     client.send_message(client.servers[0].channels[0], message)
 
 
