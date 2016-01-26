@@ -119,8 +119,6 @@ def on_ready():
     print 'Logged in as'
     print client.user.name
     print client.user.id
-    print client.servers[0].__dict__
-
     print '------'
 
 if __name__ == "__main__":
