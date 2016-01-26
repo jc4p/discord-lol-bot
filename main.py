@@ -15,6 +15,8 @@ logging.basicConfig(level=logging.INFO)
 client = discord.Client()
 client.login(USERNAME, PASSWORD)
 
+last_match_message_sent = datetime.utcnow()
+
 riot = RiotWatcher(RIOT_KEY)
 
 def get_champ_info(name):
@@ -58,6 +60,8 @@ def on_message(message):
 
 @client.event
 def on_member_update(before, after):
+    if (datetime.utcnow() - last_match_message_sent).total_seconds() < 1800:
+        pass
     summoner = "JCena4Pres"
     if random.random() > 0.50:
         summoner = "jc4p"
@@ -112,6 +116,7 @@ def on_member_update(before, after):
         else:
             message += "lol nice {}-{}-{} {} loss".format(kills, deaths, assists, champ['name'])
     client.send_message(client.servers[0].channels[0], message)
+    last_match_message_sent = datetime.utcnow()
 
 
 @client.event
