@@ -36,12 +36,17 @@ def get_champ_info(name):
     return response
 
 
-def get_last_match(summoner):
+def get_last_match(summoner, classic_only=False):
     s = riot.get_summoner(name=summoner)
     matches = riot.get_match_list(s['id'])
     if not matches:
         return None
-    return matches['matches'][0]
+    if not classic_only:
+        return matches['matches'][0]
+    classic_matches = [x for x in matches['matches'] if x['matchMode'] == 'CLASSIC']
+    if not classic_matches:
+        return None
+    return classic_matches[0]
 
 
 @client.event
@@ -65,7 +70,7 @@ def on_member_update(before, after):
     summoner = "JCena4Pres"
     if random.random() > 0.50:
         summoner = "jc4p"
-    last_match = get_last_match(summoner)
+    last_match = get_last_match(summoner, classic_only=True)
     if not last_match:
         pass
     last_match_time = datetime.fromtimestamp(last_match['timestamp'] / 1000)
