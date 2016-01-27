@@ -6,7 +6,7 @@ import re
 import logging
 import random
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from riotwatcher import RiotWatcher
 from secrets import *
 
@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 client = discord.Client()
 client.login(USERNAME, PASSWORD)
 
-last_match_message_sent = datetime.utcnow()
+last_sent = datetime.utcnow() - timedelta(1)
 
 riot = RiotWatcher(RIOT_KEY)
 
@@ -36,17 +36,14 @@ def get_champ_info(name):
     return response
 
 
-def get_last_match(summoner, classic_only=False):
+def get_last_matches(summoner, classic_only=False):
     s = riot.get_summoner(name=summoner)
-    matches = riot.get_match_list(s['id'])
+    matches = riot.get_recent_games(s['id'])
     if not matches:
-        return None
+        return []
     if not classic_only:
-        return matches['matches'][0]
-    classic_matches = [x for x in matches['matches'] if x['matchMode'] == 'CLASSIC']
-    if not classic_matches:
-        return None
-    return classic_matches[0]
+        return matches['games']
+    return [x for x in matches['games'] if x['gameMode'] == 'CLASSIC']
 
 
 @client.event
@@ -65,38 +62,30 @@ def on_message(message):
 
 @client.event
 def on_member_update(before, after):
-    if (datetime.utcnow() - last_match_message_sent).total_seconds() < 1800:
-        pass
+    global last_sent
+    if (datetime.utcnow() - last_sent).total_seconds() < 1800:
+        return
+
     summoner = "JCena4Pres"
     if random.random() > 0.50:
         summoner = "jc4p"
-    last_match = get_last_match(summoner, classic_only=True)
-    if not last_match:
-        pass
-    last_match_time = datetime.fromtimestamp(last_match['timestamp'] / 1000)
-    delta = (datetime.utcnow() - last_match_time).total_seconds()
-    if delta > 1800:
-        pass
-    match = riot.get_match(last_match['matchId'])
-    player = None
-    for p in match['participantIdentities']:
-        if p['player']['summonerName'] == summoner:
-            player = p
-            break
-    details = None
-    for d in match['participants']:
-        if p['participantId'] == player['participantId']:
-            details = d
-            break
-    team = match['teams'][0] if match['teams']['0']['teamId'] == player['teamId'] else match['teams'][1]
+    last_matches = get_last_matches(summoner, classic_only=True)
+    if not last_matches:
+        return
 
-    won = team['winner']
-    champ = riot.static_get_champion(details['championId'])
-    kills = details['kills']
-    deaths = details['deaths']
-    assists = details['assists']
+    match = last_matches[0]
+    last_match_start = datetime.fromtimestamp(match['createDate'] / 1000)
+    delta = (datetime.utcnow() - last_match_start).total_seconds()
+    if delta > 3600:
+        return
+
+    stats = match['stats']
+    won = stats['win']
+    champ = riot.static_get_champion(match['championId'])
+    kills = stats['championsKilled']
+    deaths = stats['numDeaths']
+    assists = stats['assists']
     kda = (kills + assists) / (deaths * 1.0)
-    did_most_damage = all([x['stats']['totalDamageDealtToChamps'] <= details['stats']['totalDamageDealtToChamps'] for x in match['participants']])
 
     discord_user = None
     for m in client.servers[0].members:
@@ -109,19 +98,19 @@ def on_member_update(before, after):
 
     message = "Hey <@{}> ".format(discord_user.id)
     if won:
-        if did_most_damage:
-            message += "nice {}-{}-{} {} moves, you did the most damage too!".format(kills, deaths, assists, champ['name'])
-        elif kda > 1.0:
-            message += "gg {}-{}-{} sick {} {} kda bro".format(kills, deaths, assists, champ['name'], champ['kda'])
+        if kda > 1.0:
+            message += "gg. {}-{}-{} sick {} {} kda bro".format(kills, deaths, assists, champ['name'], kda)
+        else:
+            return
     else:
         if kda > 1.0:
             message += "gg. {}-{}-{}, you still lose. guess you can't carry as {}".format(kills, deaths, assists, champ['name'])
-        elif not did_most_damage:
+        elif random.random() > 0.50:
             message += "Guess what? YOUR :clap: {} :clap: {} : clap {} :clap: {} :clap: DOES :clap: NO :clap: DAMAGE :clap:".format(kills, deaths, assists, champ['name'])
         else:
-            message += "lol nice {}-{}-{} {} loss".format(kills, deaths, assists, champ['name'])
+            return
     client.send_message(client.servers[0].channels[0], message)
-    last_match_message_sent = datetime.utcnow()
+    last_sent = datetime.utcnow()
 
 
 @client.event
