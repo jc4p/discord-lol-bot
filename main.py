@@ -89,10 +89,10 @@ def on_member_update(before, after):
 
     discord_user = None
     for m in client.servers[0].members:
-        if summoner == "JCena4Pres" and m['name'] == 'imsteaky':
+        if summoner == "JCena4Pres" and m.name == 'imsteaky':
             discord_user = m
             break
-        if summoner == 'jc4p' and m['name'] == 'kasra':
+        if summoner == 'jc4p' and m.name == 'kasra':
             discord_user = m
             break
 
